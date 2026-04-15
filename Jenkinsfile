@@ -15,16 +15,15 @@ pipeline {
         }
         
         stage('SAST') {
+            // This explicitly grabs the tool we configured in the Jenkins UI
+            environment {
+                SCANNER_HOME = tool 'sonar-scanner'
+            }
             steps {
                 echo 'Running Static Code Analysis...'
                 withSonarQubeEnv('sonar-server') {
-                    sh """
-                    sonar-scanner \
-                      -Dsonar.projectKey=secure-system \
-                      -Dsonar.sources=. \
-                      -Dsonar.host.url=http://localhost:9000 \
-                      -Dsonar.login=\$SONAR_TOKEN
-                    """
+                    // withSonarQubeEnv automatically handles the Token and URL now!
+                    sh "${SCANNER_HOME}/bin/sonar-scanner -Dsonar.projectKey=healthcare-system -Dsonar.sources=."
                 }
             }
         }
@@ -32,7 +31,6 @@ pipeline {
         stage('Security Scan') {
             steps {
                 echo 'Running Container Security Scan with Trivy...'
-                // We will install Trivy on the server in the next step!
                 sh "trivy image --severity HIGH,CRITICAL ${IMAGE_NAME}:${IMAGE_TAG}"
             }
         }
@@ -40,7 +38,6 @@ pipeline {
         stage('Deploy') {
             steps {
                 echo 'Deploying Securely to Kubernetes...'
-                // We will install Minikube/Kubectl on the server next!
                 sh "kubectl apply -f deployment.yaml"
             }
         }
